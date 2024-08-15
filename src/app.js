@@ -15,30 +15,10 @@ const init = async () => {
 
   await server.register([albumsPlugin, songsPlugin]);
 
-  server.route({
-    method: 'GET',
-    path: '/',
-    handler: () => {
-      return { message: 'Hello World' };
-    },
-  });
-
-  server.ext('onPreResponse', (request, h) => {
-    const { response } = request;
-    if (response.isBoom) {
-      const statusCode = response.output.statusCode;
-      const message = response.output.payload.message;
-      return h.response({ status: 'fail', message }).code(statusCode);
-    }
-    return h.continue;
-  });
-
   await server.start();
-  console.log(`Server running on ${server.info.uri}`);
 };
 
-process.on('unhandledRejection', (err) => {
-  console.error(err);
+process.on('unhandledRejection', () => {
   process.exit(1);
 });
 
