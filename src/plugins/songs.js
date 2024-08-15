@@ -1,4 +1,3 @@
-const Joi = require('@hapi/joi');
 const songsService = require('../services/songs');
 const songsValidation = require('../validators/songs');
 
@@ -42,6 +41,11 @@ const songsPlugin = {
         method: 'DELETE',
         path: '/songs/{id}',
         handler: songsService.deleteSong,
+      },
+      {
+        method: 'GET',
+        path: '/songs',
+        handler: songsService.searchSong,
       },
     ]);
   },

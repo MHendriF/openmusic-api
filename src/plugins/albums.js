@@ -1,4 +1,3 @@
-const Joi = require('@hapi/joi');
 const albumsService = require('../services/albums');
 const albumsValidation = require('../validators/albums');
 
@@ -42,6 +41,11 @@ const albumsPlugin = {
         method: 'DELETE',
         path: '/albums/{id}',
         handler: albumsService.deleteAlbum,
+      },
+      {
+        method: 'GET',
+        path: '/albums',
+        handler: albumsService.getAllAlbum,
       },
     ]);
   },
