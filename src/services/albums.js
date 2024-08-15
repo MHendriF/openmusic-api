@@ -35,8 +35,7 @@ const getAlbumById = async (request, h) => {
   try {
     const { id } = request.params;
     const query = `
-    SELECT a.id AS album_id, a.name AS album_name, a.year AS album_year,
-           s.id AS song_id, s.title AS song_title, s.performer AS song_performer
+    SELECT a.id AS album_id, a.name AS album_name, a.year AS album_year, s.id AS song_id, s.title AS song_title, s.performer AS song_performer
     FROM albums a
     LEFT JOIN songs s ON a.id = s.album_id
     WHERE a.id = $1
