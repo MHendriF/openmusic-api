@@ -15,6 +15,18 @@ const init = async () => {
 
   await server.register([albumsPlugin, songsPlugin]);
 
+  server.ext('onPreResponse', (request, h) => {
+    const { response } = request;
+    if (response.isBoom) {
+      const {
+        statusCode,
+        payload: { message },
+      } = response.output;
+      return h.response({ status: 'fail', message }).code(statusCode);
+    }
+    return h.continue;
+  });
+
   await server.start();
 };
 

@@ -19,6 +19,5 @@ module.exports = {
     'function-paren-newline': 'off',
     'object-curly-newline': 'off',
     'operator-linebreak': 'off',
-    'arrow-body-style': 'off',
   },
 };
