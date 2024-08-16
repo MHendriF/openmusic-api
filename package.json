@@ -6,7 +6,8 @@
     "start": "node src/app.js",
     "start-dev": "nodemon src/app.js",
     "lint": "eslint .",
-    "migrate": "node-pg-migrate"
+    "migrate": "node-pg-migrate",
+    "migrate-refresh": "node scripts/migrate-refresh.js"
   },
   "keywords": [],
   "author": "Muhamad Hendri Febriansyah",

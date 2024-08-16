@@ -58,6 +58,7 @@ const init = async () => {
     playlistsPlugin,
     collaborationsPlugin,
   ]);
+
   server.ext('onPreResponse', (request, h) => {
     const { response } = request;
     if (response.isBoom) {
