@@ -22,10 +22,6 @@ exports.up = (pgm) => {
       type: 'INTEGER',
       notNull: true,
     },
-    cover_url: {
-      type: 'TEXT',
-      notNull: false,
-    },
     created_at: {
       type: 'TIMESTAMP',
       notNull: true,
@@ -47,3 +43,4 @@ exports.up = (pgm) => {
 exports.down = (pgm) => {
   pgm.dropTable('albums');
 };
+

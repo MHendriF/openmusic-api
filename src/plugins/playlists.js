@@ -29,6 +29,14 @@ const playlistsPlugin = {
         },
       },
       {
+        method: 'DELETE',
+        path: '/playlists/{id}',
+        handler: playlistsService.deletePlaylist, // Add this line
+        options: {
+          auth: 'jwt_access',
+        },
+      },
+      {
         method: 'POST',
         path: '/playlists/{id}/songs',
         handler: playlistsService.addSongToPlaylist,
@@ -62,6 +70,14 @@ const playlistsPlugin = {
               throw err;
             },
           },
+        },
+      },
+      {
+        method: 'GET',
+        path: '/playlists/{id}/activities',
+        handler: playlistsService.getPlaylistActivities,
+        options: {
+          auth: 'jwt_access',
         },
       },
     ]);

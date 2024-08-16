@@ -62,7 +62,7 @@ const loginUser = async (request, h) => {
       return errorResponse(h, {
         message: 'User not found',
         status: 'fail',
-        statusCode: 404,
+        statusCode: 401,
       });
     }
 
@@ -87,9 +87,8 @@ const loginUser = async (request, h) => {
       { expiresIn: '7d' }
     );
 
-    const insertTokenQuery =
-      'INSERT INTO refresh_tokens (token, user_id) VALUES ($1, $2)';
-    await pool.query(insertTokenQuery, [refreshToken, user.id]);
+    const insertTokenQuery = 'INSERT INTO authentications (token) VALUES ($1)';
+    await pool.query(insertTokenQuery, [refreshToken]);
 
     return successResponse(h, {
       data: {
@@ -100,6 +99,7 @@ const loginUser = async (request, h) => {
       statusCode: 201,
     });
   } catch (error) {
+    console.log('🚀 ~ loginUser ~ error:', error.message);
     return errorResponse(h, {
       message: 'An internal server error occurred',
       status: 'error',
@@ -111,29 +111,35 @@ const loginUser = async (request, h) => {
 const refreshToken = async (request, h) => {
   try {
     const { refreshToken } = request.payload;
-    const query = 'SELECT * FROM refresh_tokens WHERE token = $1';
+    console.log('🚀 ~ refreshToken ~ refreshToken:', request.payload);
+    const query = 'SELECT * FROM authentications WHERE token = $1';
     const result = await pool.query(query, [refreshToken]);
+    console.log('🚀 ~ refreshToken ~ result:', result.rows);
     if (result.rows.length === 0) {
       return errorResponse(h, {
         message: 'Invalid refresh token',
         status: 'fail',
-        statusCode: 401,
+        statusCode: 400,
       });
     }
 
-    const token = result.rows[0];
-    const decoded = Jwt.token.decode(refreshToken);
-    Jwt.token.verifySignature(decoded, process.env.REFRESH_TOKEN_KEY);
-    if (decoded.exp < Date.now() / 1000) {
+    let decoded;
+    try {
+      decoded = Jwt.token.decode(refreshToken);
+      //console.log('🚀 ~ refreshToken ~ decoded:', decoded);
+    } catch (decodeError) {
+      console.log('🚀 ~ refreshToken ~ decodeError:', decodeError.message);
       return errorResponse(h, {
-        message: 'Refresh token expired',
+        message: 'Failed to decode refresh token',
         status: 'fail',
-        statusCode: 401,
+        statusCode: 400,
       });
     }
+
+    //console.log('🚀 ~ refreshToken ~ payload:', decoded.decoded.payload);
 
     const accessToken = Jwt.token.generate(
-      { userId: token.user_id },
+      { userId: decoded.decoded.payload.userId },
       process.env.ACCESS_TOKEN_KEY,
       { expiresIn: '1h' }
     );
@@ -146,6 +152,7 @@ const refreshToken = async (request, h) => {
       statusCode: 200,
     });
   } catch (error) {
+    console.log('🚀 ~ refreshToken ~ error:', error.message);
     return errorResponse(h, {
       message: 'An internal server error occurred',
       status: 'error',
@@ -157,7 +164,7 @@ const refreshToken = async (request, h) => {
 const logoutUser = async (request, h) => {
   try {
     const { refreshToken } = request.payload;
-    const query = 'DELETE FROM refresh_tokens WHERE token = $1';
+    const query = 'DELETE FROM authentications WHERE token = $1';
     const result = await pool.query(query, [refreshToken]);
     if (result.rowCount === 0) {
       return errorResponse(h, {

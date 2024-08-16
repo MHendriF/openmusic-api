@@ -1,5 +1,4 @@
 const Joi = require('@hapi/joi');
-const { refreshToken } = require('../services/users');
 
 const registerUserSchema = Joi.object({
   username: Joi.string().required(),

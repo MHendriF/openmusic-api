@@ -4,6 +4,7 @@ const albumsPlugin = require('./plugins/albums');
 const songsPlugin = require('./plugins/songs');
 const usersPlugin = require('./plugins/auth');
 const playlistsPlugin = require('./plugins/playlists');
+const collaborationsPlugin = require('./plugins/collaborations');
 
 const init = async () => {
   const server = Hapi.server({
@@ -55,6 +56,7 @@ const init = async () => {
     songsPlugin,
     usersPlugin,
     playlistsPlugin,
+    collaborationsPlugin,
   ]);
   server.ext('onPreResponse', (request, h) => {
     const { response } = request;

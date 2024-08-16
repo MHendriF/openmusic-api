@@ -37,7 +37,6 @@ const usersPlugin = {
         path: '/authentications',
         handler: usersService.refreshToken,
         options: {
-          auth: 'jwt_refresh',
           validate: {
             payload: usersValidation.refreshTokenSchema,
             failAction: (request, h, err) => {

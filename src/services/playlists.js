@@ -19,6 +19,7 @@ const createPlaylist = async (request, h) => {
       statusCode: 201,
     });
   } catch (error) {
+    console.log('🚀 ~ createPlaylist ~ error:', error.message);
     return errorResponse(h, {
       message: 'An internal server error occurred',
       status: 'error',
@@ -29,14 +30,21 @@ const createPlaylist = async (request, h) => {
 
 const getPlaylists = async (request, h) => {
   const { userId } = request.auth.credentials;
-  const query = 'SELECT id, name, owner FROM playlists WHERE owner = $1';
+  const query = `
+    SELECT p.id, p.name, u.username
+    FROM playlists p
+    LEFT JOIN users u ON p.owner = u.id
+    WHERE p.owner = $1 OR p.id IN (
+      SELECT playlist_id FROM collaborations WHERE user_id = $1
+    )
+  `;
   try {
     const result = await pool.query(query, [userId]);
 
     const playlists = result.rows.map((row) => ({
       id: row.id,
       name: row.name,
-      username: row.owner,
+      username: row.username,
     }));
 
     return successResponse(h, {
@@ -47,6 +55,7 @@ const getPlaylists = async (request, h) => {
       statusCode: 200,
     });
   } catch (error) {
+    console.log('🚀 ~ getPlaylists ~ error:', error.message);
     return errorResponse(h, {
       message: 'An internal server error occurred',
       status: 'error',
@@ -73,7 +82,13 @@ const addSongToPlaylist = async (request, h) => {
     }
 
     const playlist = playlistResult.rows[0];
-    if (playlist.owner !== userId) {
+    console.log('🚀 ~ addSongToPlaylist ~ playlist:', playlist);
+    const isOwner = playlist.owner === userId;
+    console.log('🚀 ~ addSongToPlaylist ~ isOwner:', isOwner);
+    const isCollaborator = await isUserCollaborator(playlistId, userId);
+    console.log('🚀 ~ addSongToPlaylist ~ isCollaborator:', isCollaborator);
+
+    if (!isOwner && !isCollaborator) {
       return errorResponse(h, {
         message: 'You do not have permission to access this playlist',
         status: 'fail',
@@ -83,6 +98,7 @@ const addSongToPlaylist = async (request, h) => {
 
     const checkSongQuery = 'SELECT * FROM songs WHERE id = $1';
     const songResult = await pool.query(checkSongQuery, [songId]);
+    console.log('🚀 ~ addSongToPlaylist ~ songResult:', songResult.rows[0]);
 
     if (songResult.rows.length === 0) {
       return errorResponse(h, {
@@ -92,9 +108,12 @@ const addSongToPlaylist = async (request, h) => {
       });
     }
 
+    const id = `playlist-song-${nanoid(16)}`;
     const insertSongQuery =
-      'INSERT INTO playlist_songs (playlist_id, song_id) VALUES ($1, $2)';
-    await pool.query(insertSongQuery, [playlistId, songId]);
+      'INSERT INTO playlist_songs (id, playlist_id, song_id) VALUES ($1, $2, $3)';
+    await pool.query(insertSongQuery, [id, playlistId, songId]);
+
+    await logPlaylistActivity(playlistId, userId, songId, 'add');
 
     return successResponse(h, {
       message: 'Song added to playlist successfully',
@@ -102,6 +121,7 @@ const addSongToPlaylist = async (request, h) => {
       statusCode: 201,
     });
   } catch (error) {
+    console.log('🚀 ~ addSongToPlaylist ~ error:', error.message);
     return errorResponse(h, {
       message: 'An internal server error occurred',
       status: 'error',
@@ -115,7 +135,12 @@ const getSongsFromPlaylist = async (request, h) => {
   const { userId } = request.auth.credentials;
 
   try {
-    const checkPlaylistQuery = 'SELECT * FROM playlists WHERE id = $1';
+    const checkPlaylistQuery = `
+      SELECT p.*, u.username AS owner_username
+      FROM playlists p
+      JOIN users u ON p.owner = u.id
+      WHERE p.id = $1
+    `;
     const playlistResult = await pool.query(checkPlaylistQuery, [playlistId]);
 
     if (playlistResult.rows.length === 0) {
@@ -127,7 +152,11 @@ const getSongsFromPlaylist = async (request, h) => {
     }
 
     const playlist = playlistResult.rows[0];
-    if (playlist.owner !== userId) {
+    console.log('🚀 ~ getSongsFromPlaylist ~ playlist:', playlist);
+    const isOwner = playlist.owner === userId;
+    const isCollaborator = await isUserCollaborator(playlistId, userId);
+
+    if (!isOwner && !isCollaborator) {
       return errorResponse(h, {
         message: 'You do not have permission to access this playlist',
         status: 'fail',
@@ -143,12 +172,14 @@ const getSongsFromPlaylist = async (request, h) => {
     `;
     const songsResult = await pool.query(songsQuery, [playlistId]);
 
+    console.log('🚀 ~ getSongsFromPlaylist ~ playlist.owner:', playlist.owner);
+
     return successResponse(h, {
       data: {
         playlist: {
           id: playlist.id,
           name: playlist.name,
-          username: playlist.owner,
+          username: playlist.owner_username,
           songs: songsResult.rows,
         },
       },
@@ -156,6 +187,7 @@ const getSongsFromPlaylist = async (request, h) => {
       statusCode: 200,
     });
   } catch (error) {
+    console.log('🚀 ~ getSongsFromPlaylist ~ error:', error.message);
     return errorResponse(h, {
       message: 'An internal server error occurred',
       status: 'error',
@@ -172,6 +204,10 @@ const deleteSongFromPlaylist = async (request, h) => {
   try {
     const checkPlaylistQuery = 'SELECT * FROM playlists WHERE id = $1';
     const playlistResult = await pool.query(checkPlaylistQuery, [playlistId]);
+    console.log(
+      '🚀 ~ deleteSongFromPlaylist ~ playlistResult:',
+      playlistResult
+    );
 
     if (playlistResult.rows.length === 0) {
       return errorResponse(h, {
@@ -182,7 +218,11 @@ const deleteSongFromPlaylist = async (request, h) => {
     }
 
     const playlist = playlistResult.rows[0];
-    if (playlist.owner !== userId) {
+    console.log('🚀 ~ deleteSongFromPlaylist ~ playlist:', playlist);
+    const isOwner = playlist.owner === userId;
+    const isCollaborator = await isUserCollaborator(playlistId, userId);
+
+    if (!isOwner && !isCollaborator) {
       return errorResponse(h, {
         message: 'You do not have permission to access this playlist',
         status: 'fail',
@@ -202,12 +242,15 @@ const deleteSongFromPlaylist = async (request, h) => {
       });
     }
 
+    await logPlaylistActivity(playlistId, userId, songId, 'delete');
+
     return successResponse(h, {
       message: 'Song deleted from playlist successfully',
       status: 'success',
       statusCode: 200,
     });
   } catch (error) {
+    console.log('🚀 ~ deleteSongFromPlaylist ~ error:', error.message);
     return errorResponse(h, {
       message: 'An internal server error occurred',
       status: 'error',
@@ -216,10 +259,125 @@ const deleteSongFromPlaylist = async (request, h) => {
   }
 };
 
+const getPlaylistActivities = async (request, h) => {
+  const { id: playlistId } = request.params;
+  const { userId } = request.auth.credentials;
+
+  try {
+    const checkPlaylistQuery = 'SELECT * FROM playlists WHERE id = $1';
+    const playlistResult = await pool.query(checkPlaylistQuery, [playlistId]);
+
+    if (playlistResult.rows.length === 0) {
+      return errorResponse(h, {
+        message: 'Playlist not found',
+        status: 'fail',
+        statusCode: 404,
+      });
+    }
+
+    const playlist = playlistResult.rows[0];
+    const isOwner = playlist.owner === userId;
+    const isCollaborator = await isUserCollaborator(playlistId, userId);
+
+    if (!isOwner && !isCollaborator) {
+      return errorResponse(h, {
+        message: 'You do not have permission to access this playlist',
+        status: 'fail',
+        statusCode: 403,
+      });
+    }
+
+    const activitiesQuery = `
+      SELECT u.username, s.title, pa.action, pa.time
+      FROM playlist_song_activities pa
+      JOIN users u ON pa.user_id = u.id
+      JOIN songs s ON pa.song_id = s.id
+      WHERE pa.playlist_id = $1
+      ORDER BY pa.time
+    `;
+    const activitiesResult = await pool.query(activitiesQuery, [playlistId]);
+
+    return successResponse(h, {
+      data: {
+        playlistId: playlistId,
+        activities: activitiesResult.rows,
+      },
+      status: 'success',
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.log('🚀 ~ getPlaylistActivities ~ error:', error.message);
+    return errorResponse(h, {
+      message: 'An internal server error occurred',
+      status: 'error',
+      statusCode: 500,
+    });
+  }
+};
+
+const deletePlaylist = async (request, h) => {
+  const { id: playlistId } = request.params;
+  const { userId } = request.auth.credentials;
+
+  try {
+    const checkPlaylistQuery = 'SELECT * FROM playlists WHERE id = $1';
+    const playlistResult = await pool.query(checkPlaylistQuery, [playlistId]);
+
+    if (playlistResult.rows.length === 0) {
+      return errorResponse(h, {
+        message: 'Playlist not found',
+        status: 'fail',
+        statusCode: 404,
+      });
+    }
+
+    const playlist = playlistResult.rows[0];
+    if (playlist.owner !== userId) {
+      return errorResponse(h, {
+        message: 'You do not have permission to delete this playlist',
+        status: 'fail',
+        statusCode: 403,
+      });
+    }
+
+    const deletePlaylistQuery = 'DELETE FROM playlists WHERE id = $1';
+    await pool.query(deletePlaylistQuery, [playlistId]);
+
+    return successResponse(h, {
+      message: 'Playlist deleted successfully',
+      status: 'success',
+      statusCode: 200,
+    });
+  } catch (error) {
+    console.log('🚀 ~ deletePlaylist ~ error:', error.message);
+    return errorResponse(h, {
+      message: 'An internal server error occurred',
+      status: 'error',
+      statusCode: 500,
+    });
+  }
+};
+
+const isUserCollaborator = async (playlistId, userId) => {
+  const query =
+    'SELECT * FROM collaborations WHERE playlist_id = $1 AND user_id = $2';
+  const result = await pool.query(query, [playlistId, userId]);
+  return result.rows.length > 0;
+};
+
+const logPlaylistActivity = async (playlistId, userId, songId, action) => {
+  const id = `playlist-activity-${nanoid(16)}`;
+  const query =
+    'INSERT INTO playlist_song_activities (id, playlist_id, user_id, song_id, action) VALUES ($1, $2, $3, $4, $5)';
+  await pool.query(query, [id, playlistId, userId, songId, action]);
+};
+
 module.exports = {
   createPlaylist,
   getPlaylists,
+  deletePlaylist,
   addSongToPlaylist,
   getSongsFromPlaylist,
   deleteSongFromPlaylist,
+  getPlaylistActivities,
 };
