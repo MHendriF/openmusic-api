@@ -1,6 +1,9 @@
 const Hapi = require('@hapi/hapi');
+const Jwt = require('@hapi/jwt');
 const albumsPlugin = require('./plugins/albums');
 const songsPlugin = require('./plugins/songs');
+const usersPlugin = require('./plugins/auth');
+const playlistsPlugin = require('./plugins/playlists');
 
 const init = async () => {
   const server = Hapi.server({
@@ -13,8 +16,46 @@ const init = async () => {
     },
   });
 
-  await server.register([albumsPlugin, songsPlugin]);
+  await server.register(Jwt);
 
+  server.auth.strategy('jwt_access', 'jwt', {
+    keys: process.env.ACCESS_TOKEN_KEY,
+    verify: {
+      aud: false,
+      iss: false,
+      sub: false,
+      maxAgeSec: 3600, // 1 hour
+    },
+    validate: (artifacts, request, h) => {
+      return {
+        isValid: true,
+        credentials: { userId: artifacts.decoded.payload.userId },
+      };
+    },
+  });
+
+  server.auth.strategy('jwt_refresh', 'jwt', {
+    keys: process.env.REFRESH_TOKEN_KEY,
+    verify: {
+      aud: false,
+      iss: false,
+      sub: false,
+      maxAgeSec: 604800, // 7 days
+    },
+    validate: (artifacts, request, h) => {
+      return {
+        isValid: true,
+        credentials: { userId: artifacts.decoded.payload.userId },
+      };
+    },
+  });
+
+  await server.register([
+    albumsPlugin,
+    songsPlugin,
+    usersPlugin,
+    playlistsPlugin,
+  ]);
   server.ext('onPreResponse', (request, h) => {
     const { response } = request;
     if (response.isBoom) {
@@ -28,9 +69,11 @@ const init = async () => {
   });
 
   await server.start();
+  console.log('Server running on %s', server.info.uri);
 };
 
-process.on('unhandledRejection', () => {
+process.on('unhandledRejection', (err) => {
+  console.error(err);
   process.exit(1);
 });
 
