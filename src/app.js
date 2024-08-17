@@ -5,7 +5,7 @@ const songsPlugin = require('./plugins/songs');
 const usersPlugin = require('./plugins/auth');
 const playlistsPlugin = require('./plugins/playlists');
 const collaborationsPlugin = require('./plugins/collaborations');
-const { logger } = require('../src/utils/logger');
+const { logger } = require('./utils/logger');
 
 const init = async () => {
   const server = Hapi.server({
