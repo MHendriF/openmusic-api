@@ -5,6 +5,7 @@ const songsPlugin = require('./plugins/songs');
 const usersPlugin = require('./plugins/auth');
 const playlistsPlugin = require('./plugins/playlists');
 const collaborationsPlugin = require('./plugins/collaborations');
+const { logger } = require('../src/utils/logger');
 
 const init = async () => {
   const server = Hapi.server({
@@ -27,12 +28,10 @@ const init = async () => {
       sub: false,
       maxAgeSec: 3600, // 1 hour
     },
-    validate: (artifacts, request, h) => {
-      return {
-        isValid: true,
-        credentials: { userId: artifacts.decoded.payload.userId },
-      };
-    },
+    validate: (artifacts) => ({
+      isValid: true,
+      credentials: { userId: artifacts.decoded.payload.userId },
+    }),
   });
 
   server.auth.strategy('jwt_refresh', 'jwt', {
@@ -43,12 +42,10 @@ const init = async () => {
       sub: false,
       maxAgeSec: 604800, // 7 days
     },
-    validate: (artifacts, request, h) => {
-      return {
-        isValid: true,
-        credentials: { userId: artifacts.decoded.payload.userId },
-      };
-    },
+    validate: (artifacts) => ({
+      isValid: true,
+      credentials: { userId: artifacts.decoded.payload.userId },
+    }),
   });
 
   await server.register([
@@ -72,11 +69,11 @@ const init = async () => {
   });
 
   await server.start();
-  console.log('Server running on %s', server.info.uri);
+  logger.info(`Server running on ${server.info.uri}`);
 };
 
 process.on('unhandledRejection', (err) => {
-  console.error(err);
+  logger.error(err);
   process.exit(1);
 });
 

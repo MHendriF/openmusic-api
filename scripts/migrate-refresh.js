@@ -1,5 +1,6 @@
 const { runner } = require('node-pg-migrate');
 const pool = require('../src/database');
+const { logger } = require('../src/utils/logger');
 
 const dropAllTables = async () => {
   try {
@@ -7,12 +8,12 @@ const dropAllTables = async () => {
     try {
       await client.query('DROP SCHEMA public CASCADE');
       await client.query('CREATE SCHEMA public');
-      console.log('All tables dropped and schema recreated.');
+      logger.info('All tables dropped and schema recreated.');
     } finally {
       client.release();
     }
   } catch (error) {
-    console.error('Error dropping tables:', error);
+    logger.error('Error dropping tables:', error);
   } finally {
     await pool.end();
   }
@@ -27,14 +28,13 @@ const dbConfig = {
 
 const runMigrations = async () => {
   try {
-    console.log('Dropping all tables...');
+    logger.info('Dropping all tables...');
     await dropAllTables();
-
-    console.log('Running all migrations...');
+    logger.info('Running all migrations...');
     await runner(dbConfig);
-    console.log('All migrations applied.');
+    logger.info('All migrations applied.');
   } catch (error) {
-    console.error('Error running migrations:', error);
+    logger.error('Error running migrations:', error);
   }
 };
 

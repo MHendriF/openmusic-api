@@ -21,7 +21,8 @@
     "dotenv": "^16.4.5",
     "nanoid": "^3.3.7",
     "node-pg-migrate": "^7.6.1",
-    "pg": "^8.12.0"
+    "pg": "^8.12.0",
+    "winston": "^3.14.2"
   },
   "devDependencies": {
     "eslint": "^8.57.0",
