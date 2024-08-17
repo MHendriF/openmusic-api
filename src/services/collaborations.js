@@ -1,6 +1,12 @@
 const { nanoid } = require('nanoid');
 const pool = require('../database');
-const { successResponse, errorResponse } = require('../utils/response');
+const {
+  notFoundResponse,
+  internalServerErrorResponse,
+  forbiddenResponse,
+  okResponse,
+  createdResponse,
+} = require('../utils/response');
 
 const addCollaboration = async (request, h) => {
   const { playlistId, userId } = request.payload;
@@ -11,32 +17,23 @@ const addCollaboration = async (request, h) => {
     const playlistResult = await pool.query(checkPlaylistQuery, [playlistId]);
 
     if (playlistResult.rows.length === 0) {
-      return errorResponse(h, {
-        message: 'Playlist not found',
-        status: 'fail',
-        statusCode: 404,
-      });
+      console.log(
+        '🚀 ~ addCollaboration ~ playlistResult:',
+        playlistResult.rows[0]
+      );
+      return notFoundResponse(h, 'Playlist not found');
     }
 
     const playlist = playlistResult.rows[0];
     if (playlist.owner !== ownerId) {
-      return errorResponse(h, {
-        message:
-          'You do not have permission to add collaborators to this playlist',
-        status: 'fail',
-        statusCode: 403,
-      });
+      return forbiddenResponse(h, 'You are not the owner of this playlist');
     }
 
     const checkUserQuery = 'SELECT * FROM users WHERE id = $1';
     const userResult = await pool.query(checkUserQuery, [userId]);
 
     if (userResult.rows.length === 0) {
-      return errorResponse(h, {
-        message: 'User not found',
-        status: 'fail',
-        statusCode: 404,
-      });
+      return notFoundResponse(h, 'User not found');
     }
 
     const collaborationId = `collab-${nanoid(16)}`;
@@ -48,17 +45,10 @@ const addCollaboration = async (request, h) => {
       userId,
     ]);
 
-    return successResponse(h, {
-      message: 'Collaboration added successfully',
-      status: 'success',
-      statusCode: 201,
-    });
+    return createdResponse(h, 'Collaboration added successfully');
   } catch (error) {
-    return errorResponse(h, {
-      message: 'An internal server error occurred',
-      status: 'error',
-      statusCode: 500,
-    });
+    console.log('🚀 ~ addCollaboration ~ error:', error.message);
+    return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
 
@@ -71,21 +61,12 @@ const deleteCollaboration = async (request, h) => {
     const playlistResult = await pool.query(checkPlaylistQuery, [playlistId]);
 
     if (playlistResult.rows.length === 0) {
-      return errorResponse(h, {
-        message: 'Playlist not found',
-        status: 'fail',
-        statusCode: 404,
-      });
+      return notFoundResponse(h, 'Playlist not found');
     }
 
     const playlist = playlistResult.rows[0];
     if (playlist.owner !== ownerId) {
-      return errorResponse(h, {
-        message:
-          'You do not have permission to remove collaborators from this playlist',
-        status: 'fail',
-        statusCode: 403,
-      });
+      return forbiddenResponse(h, 'You are not the owner of this playlist');
     }
 
     const deleteCollaborationQuery =
@@ -96,24 +77,13 @@ const deleteCollaboration = async (request, h) => {
     ]);
 
     if (result.rowCount === 0) {
-      return errorResponse(h, {
-        message: 'Collaboration not found',
-        status: 'fail',
-        statusCode: 404,
-      });
+      return notFoundResponse(h, 'Collaboration not found');
     }
 
-    return successResponse(h, {
-      message: 'Collaboration removed successfully',
-      status: 'success',
-      statusCode: 200,
-    });
+    return okResponse(h, 'Collaboration removed successfully');
   } catch (error) {
-    return errorResponse(h, {
-      message: 'An internal server error occurred',
-      status: 'error',
-      statusCode: 500,
-    });
+    console.log('🚀 ~ deleteCollaboration ~ error:', error.message);
+    return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
 

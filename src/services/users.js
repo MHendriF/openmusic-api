@@ -2,7 +2,14 @@ const { nanoid } = require('nanoid');
 const bcrypt = require('bcrypt');
 const Jwt = require('@hapi/jwt');
 const pool = require('../database');
-const { successResponse, errorResponse } = require('../utils/response');
+const {
+  internalServerErrorResponse,
+  badRequestResponse,
+  createdResponseWithData,
+  okResponseWithData,
+  okResponse,
+  unauthorizedResponse,
+} = require('../utils/response');
 
 const registerUser = async (request, h) => {
   const client = await pool.connect();
@@ -16,11 +23,7 @@ const registerUser = async (request, h) => {
     const usernameResult = await client.query(checkUsernameQuery, [username]);
     if (usernameResult.rows.length > 0) {
       await client.query('ROLLBACK');
-      return errorResponse(h, {
-        message: 'Username already exists',
-        status: 'fail',
-        statusCode: 400,
-      });
+      return badRequestResponse(h, 'Username already exists');
     }
 
     const insertUserQuery =
@@ -32,22 +35,13 @@ const registerUser = async (request, h) => {
       fullname,
     ]);
     await client.query('COMMIT');
-    return successResponse(h, {
-      data: {
-        userId: result.rows[0].id,
-      },
-      message: 'User registered successfully',
-      status: 'success',
-      statusCode: 201,
+    return createdResponseWithData(h, {
+      data: { userId: result.rows[0].id },
     });
   } catch (error) {
     console.log('🚀 ~ registerUser ~ error:', error.message);
     await client.query('ROLLBACK');
-    return errorResponse(h, {
-      message: 'An internal server error occurred',
-      status: 'error',
-      statusCode: 500,
-    });
+    return internalServerErrorResponse(h, 'An internal server error occurred');
   } finally {
     client.release();
   }
@@ -59,21 +53,13 @@ const loginUser = async (request, h) => {
     const query = 'SELECT * FROM users WHERE username = $1';
     const result = await pool.query(query, [username]);
     if (result.rows.length === 0) {
-      return errorResponse(h, {
-        message: 'User not found',
-        status: 'fail',
-        statusCode: 401,
-      });
+      return unauthorizedResponse(h, 'User not found');
     }
 
     const user = result.rows[0];
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
-      return errorResponse(h, {
-        message: 'Invalid credentials',
-        status: 'fail',
-        statusCode: 401,
-      });
+      return unauthorizedResponse(h, 'Invalid credentials');
     }
 
     const accessToken = Jwt.token.generate(
@@ -90,21 +76,15 @@ const loginUser = async (request, h) => {
     const insertTokenQuery = 'INSERT INTO authentications (token) VALUES ($1)';
     await pool.query(insertTokenQuery, [refreshToken]);
 
-    return successResponse(h, {
+    return createdResponseWithData(h, {
       data: {
         accessToken,
         refreshToken,
       },
-      status: 'success',
-      statusCode: 201,
     });
   } catch (error) {
     console.log('🚀 ~ loginUser ~ error:', error.message);
-    return errorResponse(h, {
-      message: 'An internal server error occurred',
-      status: 'error',
-      statusCode: 500,
-    });
+    return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
 
@@ -116,27 +96,16 @@ const refreshToken = async (request, h) => {
     const result = await pool.query(query, [refreshToken]);
     console.log('🚀 ~ refreshToken ~ result:', result.rows);
     if (result.rows.length === 0) {
-      return errorResponse(h, {
-        message: 'Invalid refresh token',
-        status: 'fail',
-        statusCode: 400,
-      });
+      return badRequestResponse(h, 'Invalid token');
     }
 
     let decoded;
     try {
       decoded = Jwt.token.decode(refreshToken);
-      //console.log('🚀 ~ refreshToken ~ decoded:', decoded);
     } catch (decodeError) {
       console.log('🚀 ~ refreshToken ~ decodeError:', decodeError.message);
-      return errorResponse(h, {
-        message: 'Failed to decode refresh token',
-        status: 'fail',
-        statusCode: 400,
-      });
+      return badRequestResponse(h, 'Failed to decode refresh token');
     }
-
-    //console.log('🚀 ~ refreshToken ~ payload:', decoded.decoded.payload);
 
     const accessToken = Jwt.token.generate(
       { userId: decoded.decoded.payload.userId },
@@ -144,20 +113,14 @@ const refreshToken = async (request, h) => {
       { expiresIn: '1h' }
     );
 
-    return successResponse(h, {
+    return okResponseWithData(h, {
       data: {
         accessToken,
       },
-      status: 'success',
-      statusCode: 200,
     });
   } catch (error) {
     console.log('🚀 ~ refreshToken ~ error:', error.message);
-    return errorResponse(h, {
-      message: 'An internal server error occurred',
-      status: 'error',
-      statusCode: 500,
-    });
+    return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
 
@@ -167,24 +130,12 @@ const logoutUser = async (request, h) => {
     const query = 'DELETE FROM authentications WHERE token = $1';
     const result = await pool.query(query, [refreshToken]);
     if (result.rowCount === 0) {
-      return errorResponse(h, {
-        message: 'Invalid refresh token',
-        status: 'fail',
-        statusCode: 400,
-      });
+      return badRequestResponse(h, 'Invalid token');
     }
 
-    return successResponse(h, {
-      message: 'User logged out successfully',
-      status: 'success',
-      statusCode: 200,
-    });
+    return okResponse(h, 'User logged out successfully');
   } catch (error) {
-    return errorResponse(h, {
-      message: 'An internal server error occurred',
-      status: 'error',
-      statusCode: 500,
-    });
+    return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
 
