@@ -7,6 +7,7 @@ const {
   okResponseWithData,
   okResponse,
   createdResponseWithData,
+  createdResponse,
 } = require('../utils/response');
 
 const createPlaylist = async (request, h) => {
@@ -57,11 +58,8 @@ const getPlaylists = async (request, h) => {
 
 const addSongToPlaylist = async (request, h) => {
   const { id: playlistId } = request.params;
-  console.log('🚀 ~ addSongToPlaylist ~ playlistId:', playlistId);
   const { songId } = request.payload;
-  console.log('🚀 ~ addSongToPlaylist ~ songId:', songId);
   const { userId } = request.auth.credentials;
-  console.log('🚀 ~ addSongToPlaylist ~ userId:', userId);
 
   try {
     const checkPlaylistQuery = 'SELECT * FROM playlists WHERE id = $1';
@@ -72,11 +70,8 @@ const addSongToPlaylist = async (request, h) => {
     }
 
     const playlist = playlistResult.rows[0];
-    console.log('🚀 ~ addSongToPlaylist ~ playlist:', playlist);
     const isOwner = playlist.owner === userId;
-    console.log('🚀 ~ addSongToPlaylist ~ isOwner:', isOwner);
     const isCollaborator = await isUserCollaborator(playlistId, userId);
-    console.log('🚀 ~ addSongToPlaylist ~ isCollaborator:', isCollaborator);
 
     if (!isOwner && !isCollaborator) {
       return forbiddenResponse(
@@ -100,9 +95,8 @@ const addSongToPlaylist = async (request, h) => {
 
     await logPlaylistActivity(playlistId, userId, songId, 'add');
 
-    okResponse(h, 'Song added to playlist successfully');
+    return createdResponse(h, 'Song added to playlist successfully');
   } catch (error) {
-    console.log('🚀 ~ ~ error:', error.message);
     console.log('🚀 ~ addSongToPlaylist ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
   }
@@ -176,7 +170,7 @@ const deleteSongFromPlaylist = async (request, h) => {
     }
 
     const playlist = playlistResult.rows[0];
-    console.log('🚀 ~ deleteSongFromPlaylist ~ playlist:', playlist.rows[0]);
+    console.log('🚀 ~ deleteSongFromPlaylist ~ playlist:', playlist);
     const isOwner = playlist.owner === userId;
     const isCollaborator = await isUserCollaborator(playlistId, userId);
 

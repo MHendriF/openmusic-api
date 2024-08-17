@@ -5,7 +5,7 @@ const {
   internalServerErrorResponse,
   forbiddenResponse,
   okResponse,
-  createdResponse,
+  createdResponseWithData,
 } = require('../utils/response');
 
 const addCollaboration = async (request, h) => {
@@ -45,7 +45,9 @@ const addCollaboration = async (request, h) => {
       userId,
     ]);
 
-    return createdResponse(h, 'Collaboration added successfully');
+    return createdResponseWithData(h, {
+      data: { collaborationId },
+    });
   } catch (error) {
     console.log('🚀 ~ addCollaboration ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
