@@ -1,6 +1,12 @@
 const { nanoid } = require('nanoid');
 const pool = require('../database');
-const { successResponse, errorResponse } = require('../utils/response');
+const {
+  internalServerErrorResponse,
+  createdResponseWithData,
+  notFoundResponse,
+  okResponseWithData,
+  okResponse,
+} = require('../utils/response');
 
 const createSong = async (request, h) => {
   const client = await pool.connect();
@@ -21,20 +27,15 @@ const createSong = async (request, h) => {
       albumId,
     ]);
     await client.query('COMMIT');
-    return successResponse(h, {
+    return createdResponseWithData(h, {
       data: {
         songId: result.rows[0].id,
       },
-      status: 'success',
-      statusCode: 201,
     });
   } catch (error) {
+    console.log('🚀 ~ createSong ~ error:', error.message);
     await client.query('ROLLBACK');
-    return errorResponse(h, {
-      message: 'An internal server error occurred',
-      status: 'error',
-      statusCode: 500,
-    });
+    return internalServerErrorResponse(h, 'An internal server error occurred');
   } finally {
     client.release();
   }
@@ -46,25 +47,14 @@ const getSongById = async (request, h) => {
     const query = 'SELECT * FROM songs WHERE id = $1';
     const result = await pool.query(query, [id]);
     if (result.rows.length === 0) {
-      return errorResponse(h, {
-        message: 'Song not found',
-        status: 'fail',
-        statusCode: 404,
-      });
+      return notFoundResponse(h, 'Song not found');
     }
-    return successResponse(h, {
-      data: {
-        song: result.rows[0],
-      },
-      status: 'success',
-      statusCode: 200,
+    return okResponseWithData(h, {
+      data: { song: result.rows[0] },
     });
   } catch (error) {
-    return errorResponse(h, {
-      message: 'An internal server error occurred',
-      status: 'error',
-      statusCode: 500,
-    });
+    console.log('🚀 ~ getSongById ~ error:', error.message);
+    return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
 
@@ -88,27 +78,14 @@ const updateSong = async (request, h) => {
     ]);
     if (result.rows.length === 0) {
       await client.query('ROLLBACK');
-      return errorResponse(h, {
-        message: 'Song not found',
-        status: 'fail',
-        statusCode: 404,
-      });
+      return notFoundResponse(h, 'Song not found');
     }
     await client.query('COMMIT');
-    return successResponse(h, {
-      message: 'Song updated successfully',
-      status: 'success',
-      statusCode: 200,
-    });
+    return okResponse(h, 'Song updated successfully');
   } catch (error) {
     await client.query('ROLLBACK');
-    return errorResponse(h, {
-      message: 'An internal server error occurred',
-      status: 'error',
-      statusCode: 500,
-    });
-  } finally {
-    client.release();
+    console.log('🚀 ~ updateSong ~ error:', error.message);
+    return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
 
@@ -121,25 +98,14 @@ const deleteSong = async (request, h) => {
     const result = await client.query(query, [id]);
     if (result.rows.length === 0) {
       await client.query('ROLLBACK');
-      return errorResponse(h, {
-        message: 'Song not found',
-        status: 'fail',
-        statusCode: 404,
-      });
+      return notFoundResponse(h, 'Song not found');
     }
     await client.query('COMMIT');
-    return successResponse(h, {
-      message: 'Song deleted successfully',
-      status: 'success',
-      statusCode: 200,
-    });
+    return okResponse(h, 'Song deleted successfully');
   } catch (error) {
+    console.log('🚀 ~ deleteSong ~ error:', error.message);
     await client.query('ROLLBACK');
-    return errorResponse(h, {
-      message: 'An internal server error occurred',
-      status: 'error',
-      statusCode: 500,
-    });
+    return internalServerErrorResponse(h, 'An internal server error occurred');
   } finally {
     client.release();
   }
@@ -170,19 +136,12 @@ const searchSong = async (request, h) => {
     }
 
     const result = await pool.query(query, values);
-    return successResponse(h, {
-      data: {
-        songs: result.rows,
-      },
-      status: 'success',
-      statusCode: 200,
+    return okResponseWithData(h, {
+      data: { songs: result.rows },
     });
   } catch (error) {
-    return errorResponse(h, {
-      message: 'An internal server error occurred',
-      status: 'error',
-      statusCode: 500,
-    });
+    console.log('🚀 ~ searchSong ~ error:', error.message);
+    return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
 module.exports = {

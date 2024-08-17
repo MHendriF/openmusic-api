@@ -1,6 +1,12 @@
 const { nanoid } = require('nanoid');
 const pool = require('../database');
-const { successResponse, errorResponse } = require('../utils/response');
+const {
+  notFoundResponse,
+  internalServerErrorResponse,
+  createdResponseWithData,
+  okResponseWithData,
+  okResponse,
+} = require('../utils/response');
 
 const createAlbum = async (request, h) => {
   const client = await pool.connect();
@@ -12,20 +18,11 @@ const createAlbum = async (request, h) => {
       'INSERT INTO albums (id, name, year) VALUES ($1, $2, $3) RETURNING *';
     const result = await client.query(query, [id, name, year]);
     await client.query('COMMIT');
-    return successResponse(h, {
-      data: {
-        albumId: result.rows[0].id,
-      },
-      status: 'success',
-      statusCode: 201,
-    });
+    return createdResponseWithData(h, { data: { albumId: result.rows[0].id } });
   } catch (error) {
     await client.query('ROLLBACK');
-    return errorResponse(h, {
-      message: 'An internal server error occurred',
-      status: 'error',
-      statusCode: 500,
-    });
+    console.log('🚀 ~ createAlbum ~ error:', error.message);
+    return internalServerErrorResponse(h, 'An internal server error occurred');
   } finally {
     client.release();
   }
@@ -42,11 +39,7 @@ const getAlbumById = async (request, h) => {
   `;
     const result = await pool.query(query, [id]);
     if (result.rows.length === 0) {
-      return errorResponse(h, {
-        message: 'Album not found',
-        status: 'fail',
-        statusCode: 404,
-      });
+      return notFoundResponse(h, 'Album not found');
     }
 
     const album = {
@@ -61,19 +54,10 @@ const getAlbumById = async (request, h) => {
         }))
         .filter((song) => song.id !== null),
     };
-    return successResponse(h, {
-      data: {
-        album,
-      },
-      status: 'success',
-      statusCode: 200,
-    });
+    return okResponseWithData(h, { data: { album } });
   } catch (error) {
-    return errorResponse(h, {
-      message: 'An internal server error occurred',
-      status: 'error',
-      statusCode: 500,
-    });
+    console.log('🚀 ~ getAlbumById ~ error:', error.message);
+    return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
 
@@ -88,25 +72,14 @@ const updateAlbum = async (request, h) => {
     const result = await client.query(query, [name, year, id]);
     if (result.rows.length === 0) {
       await client.query('ROLLBACK');
-      return errorResponse(h, {
-        message: 'Album not found',
-        status: 'fail',
-        statusCode: 404,
-      });
+      return notFoundResponse(h, 'Album not found');
     }
     await client.query('COMMIT');
-    return successResponse(h, {
-      message: 'Album updated successfully',
-      status: 'success',
-      statusCode: 200,
-    });
+    return okResponse(h, 'Album updated successfully');
   } catch (error) {
     await client.query('ROLLBACK');
-    return errorResponse(h, {
-      message: 'An internal server error occurred',
-      status: 'error',
-      statusCode: 500,
-    });
+    console.log('🚀 ~ updateAlbum ~ error:', error.message);
+    return internalServerErrorResponse(h, 'An internal server error occurred');
   } finally {
     client.release();
   }
@@ -121,25 +94,14 @@ const deleteAlbum = async (request, h) => {
     const result = await client.query(query, [id]);
     if (result.rows.length === 0) {
       await client.query('ROLLBACK');
-      return errorResponse(h, {
-        message: 'Album not found',
-        status: 'fail',
-        statusCode: 404,
-      });
+      return notFoundResponse(h, 'Album not found');
     }
     await client.query('COMMIT');
-    return successResponse(h, {
-      message: 'Album deleted successfully',
-      status: 'success',
-      statusCode: 200,
-    });
+    return okResponse(h, 'Album deleted successfully');
   } catch (error) {
     await client.query('ROLLBACK');
-    return errorResponse(h, {
-      message: 'An internal server error occurred',
-      status: 'error',
-      statusCode: 500,
-    });
+    console.log('🚀 ~ deleteAlbum ~ error:', error.message);
+    return internalServerErrorResponse(h, 'An internal server error occurred');
   } finally {
     client.release();
   }
@@ -149,19 +111,12 @@ const getAllAlbum = async (request, h) => {
   try {
     const query = 'SELECT * FROM albums';
     const result = await pool.query(query);
-    return successResponse(h, {
-      data: {
-        albums: result.rows,
-      },
-      status: 'success',
-      statusCode: 200,
+    return okResponseWithData(h, {
+      data: { albums: result.rows },
     });
   } catch (error) {
-    return errorResponse(h, {
-      message: 'An internal server error occurred',
-      status: 'error',
-      statusCode: 500,
-    });
+    console.log('🚀 ~ getAllAlbum ~ error:', error.message);
+    return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
 
