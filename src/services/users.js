@@ -86,11 +86,11 @@ const loginUser = async (request, h) => {
   }
 };
 
-const refreshToken = async (request, h) => {
+const getNewToken = async (request, h) => {
   try {
-    const { refreshToken: token } = request.payload;
+    const { refreshToken } = request.payload;
     const query = 'SELECT * FROM authentications WHERE token = $1';
-    const result = await pool.query(query, [token]);
+    const result = await pool.query(query, [refreshToken]);
     if (result.rows.length === 0) {
       return badRequestResponse(h, 'Invalid token');
     }
@@ -120,9 +120,9 @@ const refreshToken = async (request, h) => {
 
 const logoutUser = async (request, h) => {
   try {
-    const { refreshToken: token } = request.payload;
+    const { refreshToken } = request.payload;
     const query = 'DELETE FROM authentications WHERE token = $1';
-    const result = await pool.query(query, [token]);
+    const result = await pool.query(query, [refreshToken]);
     if (result.rowCount === 0) {
       return badRequestResponse(h, 'Invalid token');
     }
@@ -136,6 +136,6 @@ const logoutUser = async (request, h) => {
 module.exports = {
   registerUser,
   loginUser,
-  refreshToken,
+  getNewToken,
   logoutUser,
 };

@@ -35,7 +35,7 @@ const usersPlugin = {
       {
         method: 'PUT',
         path: '/authentications',
-        handler: usersService.refreshToken,
+        handler: usersService.getNewToken,
         options: {
           validate: {
             payload: usersValidation.refreshTokenSchema,
