@@ -21,7 +21,6 @@ const createAlbum = async (request, h) => {
     return createdResponseWithData(h, { data: { albumId: result.rows[0].id } });
   } catch (error) {
     await client.query('ROLLBACK');
-    console.log('🚀 ~ createAlbum ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
   } finally {
     client.release();
@@ -56,7 +55,6 @@ const getAlbumById = async (request, h) => {
     };
     return okResponseWithData(h, { data: { album } });
   } catch (error) {
-    console.log('🚀 ~ getAlbumById ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
@@ -78,7 +76,6 @@ const updateAlbum = async (request, h) => {
     return okResponse(h, 'Album updated successfully');
   } catch (error) {
     await client.query('ROLLBACK');
-    console.log('🚀 ~ updateAlbum ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
   } finally {
     client.release();
@@ -100,7 +97,6 @@ const deleteAlbum = async (request, h) => {
     return okResponse(h, 'Album deleted successfully');
   } catch (error) {
     await client.query('ROLLBACK');
-    console.log('🚀 ~ deleteAlbum ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
   } finally {
     client.release();
@@ -115,7 +111,6 @@ const getAllAlbum = async (request, h) => {
       data: { albums: result.rows },
     });
   } catch (error) {
-    console.log('🚀 ~ getAllAlbum ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };

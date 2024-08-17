@@ -17,10 +17,6 @@ const addCollaboration = async (request, h) => {
     const playlistResult = await pool.query(checkPlaylistQuery, [playlistId]);
 
     if (playlistResult.rows.length === 0) {
-      console.log(
-        '🚀 ~ addCollaboration ~ playlistResult:',
-        playlistResult.rows[0]
-      );
       return notFoundResponse(h, 'Playlist not found');
     }
 
@@ -49,7 +45,6 @@ const addCollaboration = async (request, h) => {
       data: { collaborationId },
     });
   } catch (error) {
-    console.log('🚀 ~ addCollaboration ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
@@ -84,7 +79,6 @@ const deleteCollaboration = async (request, h) => {
 
     return okResponse(h, 'Collaboration removed successfully');
   } catch (error) {
-    console.log('🚀 ~ deleteCollaboration ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };

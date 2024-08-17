@@ -33,7 +33,6 @@ const createSong = async (request, h) => {
       },
     });
   } catch (error) {
-    console.log('🚀 ~ createSong ~ error:', error.message);
     await client.query('ROLLBACK');
     return internalServerErrorResponse(h, 'An internal server error occurred');
   } finally {
@@ -53,7 +52,6 @@ const getSongById = async (request, h) => {
       data: { song: result.rows[0] },
     });
   } catch (error) {
-    console.log('🚀 ~ getSongById ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
@@ -84,7 +82,6 @@ const updateSong = async (request, h) => {
     return okResponse(h, 'Song updated successfully');
   } catch (error) {
     await client.query('ROLLBACK');
-    console.log('🚀 ~ updateSong ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
@@ -103,7 +100,6 @@ const deleteSong = async (request, h) => {
     await client.query('COMMIT');
     return okResponse(h, 'Song deleted successfully');
   } catch (error) {
-    console.log('🚀 ~ deleteSong ~ error:', error.message);
     await client.query('ROLLBACK');
     return internalServerErrorResponse(h, 'An internal server error occurred');
   } finally {
@@ -140,7 +136,6 @@ const searchSong = async (request, h) => {
       data: { songs: result.rows },
     });
   } catch (error) {
-    console.log('🚀 ~ searchSong ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };

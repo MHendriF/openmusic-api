@@ -10,6 +10,20 @@ const {
   createdResponse,
 } = require('../utils/response');
 
+const isUserCollaborator = async (playlistId, userId) => {
+  const query =
+    'SELECT * FROM collaborations WHERE playlist_id = $1 AND user_id = $2';
+  const result = await pool.query(query, [playlistId, userId]);
+  return result.rows.length > 0;
+};
+
+const logPlaylistActivity = async (playlistId, userId, songId, action) => {
+  const id = `playlist-activity-${nanoid(16)}`;
+  const query =
+    'INSERT INTO playlist_song_activities (id, playlist_id, user_id, song_id, action) VALUES ($1, $2, $3, $4, $5)';
+  await pool.query(query, [id, playlistId, userId, songId, action]);
+};
+
 const createPlaylist = async (request, h) => {
   const { name } = request.payload;
   const { userId } = request.auth.credentials;
@@ -23,7 +37,6 @@ const createPlaylist = async (request, h) => {
       data: { playlistId: result.rows[0].id },
     });
   } catch (error) {
-    console.log('🚀 ~ createPlaylist ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
@@ -51,7 +64,6 @@ const getPlaylists = async (request, h) => {
       data: { playlists },
     });
   } catch (error) {
-    console.log('🚀 ~ getPlaylists ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
@@ -82,8 +94,6 @@ const addSongToPlaylist = async (request, h) => {
 
     const checkSongQuery = 'SELECT * FROM songs WHERE id = $1';
     const songResult = await pool.query(checkSongQuery, [songId]);
-    console.log('🚀 ~ addSongToPlaylist ~ songResult:', songResult.rows[0]);
-
     if (songResult.rows.length === 0) {
       return notFoundResponse(h, 'Song not found');
     }
@@ -97,7 +107,6 @@ const addSongToPlaylist = async (request, h) => {
 
     return createdResponse(h, 'Song added to playlist successfully');
   } catch (error) {
-    console.log('🚀 ~ addSongToPlaylist ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
@@ -120,7 +129,6 @@ const getSongsFromPlaylist = async (request, h) => {
     }
 
     const playlist = playlistResult.rows[0];
-    console.log('🚀 ~ getSongsFromPlaylist ~ playlist:', playlist);
     const isOwner = playlist.owner === userId;
     const isCollaborator = await isUserCollaborator(playlistId, userId);
 
@@ -139,7 +147,6 @@ const getSongsFromPlaylist = async (request, h) => {
     `;
     const songsResult = await pool.query(songsQuery, [playlistId]);
 
-    console.log('🚀 ~ getSongsFromPlaylist ~ playlist.owner:', playlist.owner);
     return okResponseWithData(h, {
       data: {
         playlist: {
@@ -151,7 +158,6 @@ const getSongsFromPlaylist = async (request, h) => {
       },
     });
   } catch (error) {
-    console.log('🚀 ~ getSongsFromPlaylist ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
@@ -170,7 +176,6 @@ const deleteSongFromPlaylist = async (request, h) => {
     }
 
     const playlist = playlistResult.rows[0];
-    console.log('🚀 ~ deleteSongFromPlaylist ~ playlist:', playlist);
     const isOwner = playlist.owner === userId;
     const isCollaborator = await isUserCollaborator(playlistId, userId);
 
@@ -193,7 +198,6 @@ const deleteSongFromPlaylist = async (request, h) => {
 
     return okResponse(h, 'Song deleted from playlist successfully');
   } catch (error) {
-    console.log('🚀 ~ deleteSongFromPlaylist ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
@@ -238,7 +242,6 @@ const getPlaylistActivities = async (request, h) => {
       },
     });
   } catch (error) {
-    console.log('🚀 ~ getPlaylistActivities ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
   }
 };
@@ -265,23 +268,8 @@ const deletePlaylist = async (request, h) => {
 
     return okResponse(h, 'Playlist deleted successfully');
   } catch (error) {
-    console.log('🚀 ~ deletePlaylist ~ error:', error.message);
     return internalServerErrorResponse(h, 'An internal server error occurred');
   }
-};
-
-const isUserCollaborator = async (playlistId, userId) => {
-  const query =
-    'SELECT * FROM collaborations WHERE playlist_id = $1 AND user_id = $2';
-  const result = await pool.query(query, [playlistId, userId]);
-  return result.rows.length > 0;
-};
-
-const logPlaylistActivity = async (playlistId, userId, songId, action) => {
-  const id = `playlist-activity-${nanoid(16)}`;
-  const query =
-    'INSERT INTO playlist_song_activities (id, playlist_id, user_id, song_id, action) VALUES ($1, $2, $3, $4, $5)';
-  await pool.query(query, [id, playlistId, userId, songId, action]);
 };
 
 module.exports = {

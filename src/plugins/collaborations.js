@@ -1,6 +1,5 @@
 const collaborationsService = require('../services/collaborations');
 const collaborationsValidation = require('../validators/collaborations');
-const { errorResponse } = require('../utils/response');
 
 const collaborationsPlugin = {
   name: 'collaborations',
@@ -16,11 +15,7 @@ const collaborationsPlugin = {
           validate: {
             payload: collaborationsValidation.addCollaborationSchema,
             failAction: (request, h, err) => {
-              return errorResponse(h, {
-                message: err.message,
-                status: 'fail',
-                statusCode: 400,
-              });
+              throw err;
             },
           },
         },
@@ -34,11 +29,7 @@ const collaborationsPlugin = {
           validate: {
             payload: collaborationsValidation.deleteCollaborationSchema,
             failAction: (request, h, err) => {
-              return errorResponse(h, {
-                message: err.message,
-                status: 'fail',
-                statusCode: 400,
-              });
+              throw err;
             },
           },
         },
